@@ -30,6 +30,10 @@ impl Status {
             if line.starts_with("1 M.") {
                 s.staged = true;
             }
+            if line.starts_with("1 MM") {
+                s.unstaged = true;
+                s.staged = true;
+            }
             if line.starts_with("# branch.head") {
                 let v: Vec<&str> = line.split(' ').collect();
                 s.branch = String::from(v[2]);
@@ -95,6 +99,29 @@ mod tests {
                 untracked: false,
                 unstaged: false,
                 staged: false,
+                branch: String::from("master"),
+                upstream: String::from("origin/master"),
+                ahead: false,
+                behind: false,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_staged_and_unstaged_changes_on_same_file() {
+        let test_status = "\
+# branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
+# branch.head master
+# branch.upstream origin/master
+# branch.ab +0 -0
+1 MM N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 311c77295c5b6056f4599c2b8d0a019d4c76746a README.md
+";
+        assert_eq!(
+            Status::new(&test_status).unwrap(),
+            Status {
+                untracked: false,
+                unstaged: true,
+                staged: true,
                 branch: String::from("master"),
                 upstream: String::from("origin/master"),
                 ahead: false,
