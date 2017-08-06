@@ -26,16 +26,15 @@ impl GitStatus {
             if line.starts_with("# branch.oid") {
                 let v: Vec<&str> = line.split(' ').collect();
                 s.object_id = String::from(v[2]);
-            }
-            if line.starts_with("# branch.head") {
+            } else if line.starts_with("# branch.head") {
                 let v: Vec<&str> = line.split(' ').collect();
                 s.branch = String::from(v[2]);
-            }
-            if line.starts_with("# branch.upstream") {
+                continue;
+            } else if line.starts_with("# branch.upstream") {
                 let v: Vec<&str> = line.split(' ').collect();
                 s.upstream = String::from(v[2]);
-            }
-            if line.starts_with("# branch.ab") {
+                continue;
+            } else if line.starts_with("# branch.ab") {
                 let v: Vec<&str> = line.split(' ').collect();
                 if v[2] != "+0" {
                     s.ahead = true;
@@ -43,18 +42,14 @@ impl GitStatus {
                 if v[3] != "-0" {
                     s.behind = true;
                 }
-            }
-            if line.starts_with("1 M.") {
+            } else if line.starts_with("1 M.") {
                 s.staged = true;
-            }
-            if line.starts_with("1 .M") {
+            } else if line.starts_with("1 .M") {
                 s.unstaged = true;
-            }
-            if line.starts_with("1 MM") {
+            } else if line.starts_with("1 MM") {
                 s.unstaged = true;
                 s.staged = true;
-            }
-            if line.starts_with("?") {
+            } else if line.starts_with("?") {
                 s.untracked = true;
             }
         }
