@@ -57,7 +57,8 @@ impl GitStatus {
                 },
                 Some("?") => s.untracked = true,
                 Some("!") => s.ignored = true,
-                _ => {},
+                Some("") | None => {},
+                _ => return Err("Unrecognized line in status"),
             }
         }
         Ok(s)
@@ -220,5 +221,10 @@ mod tests {
                 ignored: true,
             }
         );
+    }
+
+    #[test]
+    fn parse_improper_status() {
+        assert_eq!(GitStatus::new("foo"), Err("Unrecognized line in status"));
     }
 }
