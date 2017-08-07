@@ -51,12 +51,8 @@ impl GitStatus {
                         }
                     }
                 },
-                Some("?") => {
-                    s.untracked = true;
-                },
-                Some("!") => {
-                    s.ignored = true;
-                },
+                Some("?") => s.untracked = true,
+                Some("!") => s.ignored = true,
                 _ => {},
             }
         }
