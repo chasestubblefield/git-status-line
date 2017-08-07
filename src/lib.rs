@@ -76,7 +76,89 @@ mod tests {
     }
 
     #[test]
-    fn parse_dirty() {
+    fn parse_branch() {
+        let test_status = "\
+# branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
+# branch.head master
+";
+        assert_eq!(
+            GitStatus::new(test_status).unwrap().branch,
+            Some(BranchInfo {
+                object_id: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
+                branch: Some(String::from("master")),
+            })
+        );
+    }
+
+    #[test]
+    fn parse_detached_head() {
+        let test_status = "\
+# branch.oid 2a7bb916bba69a5fc9d428acc80b1bce64e3e0bc
+# branch.head (detached)
+";
+        assert_eq!(
+            GitStatus::new(test_status).unwrap().branch,
+            Some(BranchInfo {
+                object_id: String::from("2a7bb916bba69a5fc9d428acc80b1bce64e3e0bc"),
+                branch: None
+            })
+        );
+    }
+
+    #[test]
+    fn parse_upstream() {
+        let test_status = "\
+# branch.upstream origin/master
+# branch.ab +1 -1
+";
+        assert_eq!(
+            GitStatus::new(test_status).unwrap().upstream,
+            Some(UpstreamInfo {
+                upstream: String::from("origin/master"),
+                ahead: true,
+                behind: true,
+            })
+        );
+    }
+
+    #[test]
+    fn parse_staged_only() {
+        let test_status = "1 M. N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 311c77295c5b6056f4599c2b8d0a019d4c76746a README.md\n";
+        let s = GitStatus::new(test_status).unwrap();
+        assert!(s.staged);
+        assert!(!s.unstaged);
+    }
+
+    #[test]
+    fn parse_unstaged_only() {
+        let test_status = "1 .M N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 README.md\n";
+        let s = GitStatus::new(test_status).unwrap();
+        assert!(!s.staged);
+        assert!(s.unstaged);
+    }
+
+    #[test]
+    fn parse_both_staged_and_unstaged() {
+        let test_status = "1 MM N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 311c77295c5b6056f4599c2b8d0a019d4c76746a README.md\n";
+        let s = GitStatus::new(test_status).unwrap();
+        assert!(s.staged);
+        assert!(s.unstaged);
+    }
+
+    #[test]
+    fn parse_untracked() {
+        let test_status = "? foo.txt\n";
+        assert!(GitStatus::new(test_status).unwrap().untracked);
+    }
+
+    #[test]
+    fn parse_ignored() {
+        let test_status = "! node_modules/\n";
+        assert!(GitStatus::new(test_status).unwrap().ignored);
+    }
+
+    #[test]
+    fn parse_very_dirty() {
         let test_status = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
@@ -104,62 +186,6 @@ mod tests {
                 untracked: true,
                 ignored: true,
             }
-        );
-    }
-
-    #[test]
-    fn parse_branch() {
-        let test_status = "\
-# branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
-# branch.head master
-";
-        assert_eq!(
-            GitStatus::new(test_status).unwrap().branch,
-            Some(BranchInfo {
-                object_id: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
-                branch: Some(String::from("master")),
-            })
-        );
-    }
-
-    #[test]
-    fn parse_upstream() {
-        let test_status = "\
-# branch.upstream origin/master
-# branch.ab +1 -1
-";
-        assert_eq!(
-            GitStatus::new(test_status).unwrap().upstream,
-            Some(UpstreamInfo {
-                upstream: String::from("origin/master"),
-                ahead: true,
-                behind: true,
-            })
-        );
-    }
-
-    #[test]
-    fn parse_staged_and_unstaged_on_same_file() {
-        let test_status = "\
-1 MM N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 311c77295c5b6056f4599c2b8d0a019d4c76746a README.md
-";
-        let s = GitStatus::new(test_status).unwrap();
-        assert!(s.staged);
-        assert!(s.unstaged);
-    }
-
-    #[test]
-    fn parse_detached_head() {
-        let test_status = "\
-# branch.oid 2a7bb916bba69a5fc9d428acc80b1bce64e3e0bc
-# branch.head (detached)
-";
-        assert_eq!(
-            GitStatus::new(test_status).unwrap().branch,
-            Some(BranchInfo {
-                object_id: String::from("2a7bb916bba69a5fc9d428acc80b1bce64e3e0bc"),
-                branch: None
-            })
         );
     }
 }
