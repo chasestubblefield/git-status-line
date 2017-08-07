@@ -32,23 +32,28 @@ impl GitStatus {
             ignored: false,
         };
         for line in status_txt.lines() {
-            let words: Vec<&str> = line.split(' ').collect();
-            if let Some(&first) = words.first() {
-                match first {
-                    "#" => {
-                    },
-                    "1" => {
-                        s.staged = true;
-                        s.unstaged = true;
-                    },
-                    "?" => {
-                        s.untracked = true;
-                    },
-                    "!" => {
-                        s.ignored = true;
-                    },
-                    _ => {},
-                }
+            let mut words = line.split(' ');
+            match words.next() {
+                Some("#") => {
+                },
+                Some("1") => {
+                    match words.next() {
+                        Some("M.") => s.staged = true,
+                        Some(".M") => s.unstaged = true,
+                        Some("MM") => {
+                            s.staged = true;
+                            s.unstaged = true;
+                        },
+                        _ => {},
+                    }
+                },
+                Some("?") => {
+                    s.untracked = true;
+                },
+                Some("!") => {
+                    s.ignored = true;
+                },
+                _ => {},
             }
         }
         Ok(s)
