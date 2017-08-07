@@ -46,14 +46,12 @@ impl GitStatus {
                     if let Some(changes) = words.next() {
                         let mut changes = changes.chars();
                         match changes.next() {
-                            Some('.') => {},
+                            Some('.') | None => {},
                             Some(_) => s.staged = true,
-                            None => {},
                         }
                         match changes.next() {
-                            Some('.') => {},
+                            Some('.') | None => {},
                             Some(_) => s.unstaged = true,
-                            None => {},
                         }
                     }
                 },
