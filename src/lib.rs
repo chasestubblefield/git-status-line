@@ -34,6 +34,13 @@ impl GitStatus {
             let mut words = line.split(' ');
             match words.next() {
                 Some("#") => {
+                    if s.branch == None {
+                        s.branch = Some(BranchInfo {
+                            object_id: String::new(),
+                            name: None,
+                            upstream: None,
+                        });
+                    }
                 },
                 Some("1") | Some("2") => {
                     if let Some(changes) = words.next() {
@@ -41,12 +48,12 @@ impl GitStatus {
                         match changes.next() {
                             Some('.') => {},
                             Some(_) => s.staged = true,
-                            _ => {},
+                            None => {},
                         }
                         match changes.next() {
                             Some('.') => {},
                             Some(_) => s.unstaged = true,
-                            _ => {},
+                            None => {},
                         }
                     }
                 },
