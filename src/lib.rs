@@ -36,15 +36,19 @@ impl GitStatus {
             match words.next() {
                 Some("#") => {
                 },
-                Some("1") => {
-                    match words.next() {
-                        Some("M.") => s.staged = true,
-                        Some(".M") => s.unstaged = true,
-                        Some("MM") => {
-                            s.staged = true;
-                            s.unstaged = true;
-                        },
-                        _ => {},
+                Some("1") | Some("2") => {
+                    if let Some(changes) = words.next() {
+                        let mut changes = changes.chars();
+                        match changes.next() {
+                            Some('.') => {},
+                            Some(_) => s.staged = true,
+                            _ => {},
+                        }
+                        match changes.next() {
+                            Some('.') => {},
+                            Some(_) => s.unstaged = true,
+                            _ => {},
+                        }
                     }
                 },
                 Some("?") => {
@@ -148,6 +152,22 @@ mod tests {
         let s = GitStatus::new(test_status).unwrap();
         assert!(s.staged);
         assert!(s.unstaged);
+    }
+
+    #[test]
+    fn parse_deleted() {
+        let test_status = "1 D. N... 100644 000000 000000 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 0000000000000000000000000000000000000000 README.md\n";
+        let s = GitStatus::new(test_status).unwrap();
+        assert!(s.staged);
+        assert!(!s.unstaged);
+    }
+
+    #[test]
+    fn parse_renamed() {
+        let test_status = "2 R. N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 R100 README	README.md\n";
+        let s = GitStatus::new(test_status).unwrap();
+        assert!(s.staged);
+        assert!(!s.unstaged);
     }
 
     #[test]
