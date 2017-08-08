@@ -30,16 +30,42 @@ impl GitStatus {
             untracked: false,
             ignored: false,
         };
+        let mut object_id: Option<String> = None;
+        let mut branch_name: Option<String> = None;
+        let mut upstream_name: Option<String> = None;
+        let mut ahead = false;
+        let mut behind = false;
         for line in status_txt.lines() {
             let mut words = line.split(' ');
             match words.next() {
                 Some("#") => {
-                    if s.branch == None {
-                        s.branch = Some(BranchInfo {
-                            object_id: String::new(),
-                            name: None,
-                            upstream: None,
-                        });
+                    match words.next() {
+                        Some("branch.oid") => {
+                            if let Some(oid) = words.next() {
+                                object_id = Some(String::from(oid));
+                            }
+                        },
+                        Some("branch.head") => {
+                            if let Some(head) = words.next() {
+                                branch_name = Some(String::from(head));
+                            }
+                        }
+                        Some("branch.upstream") => {
+                            if let Some(upstream) = words.next() {
+                                upstream_name = Some(String::from(upstream));
+                            }
+                        },
+                        Some("branch.ab") => {
+                            match words.next() {
+                                Some("+0") | None => {},
+                                Some(_) => ahead = true,
+                            }
+                            match words.next() {
+                                Some("-0") | None => {},
+                                Some(_) => behind = true,
+                            }
+                        },
+                        _ => {},
                     }
                 },
                 Some("1") | Some("2") => {
@@ -60,6 +86,24 @@ impl GitStatus {
                 Some("") | None => {},
                 _ => return Err("Unrecognized line in status"),
             }
+        }
+        if branch_name == Some(String::from("(detached)")) {
+            branch_name = None;
+        }
+        if let Some(oid) = object_id {
+            let mut b_info = BranchInfo {
+                object_id: oid,
+                name: branch_name,
+                upstream: None,
+            };
+            if let Some(up) = upstream_name {
+                b_info.upstream = Some(UpstreamInfo {
+                    name: up,
+                    ahead: ahead,
+                    behind: behind,
+                });
+            }
+            s.branch = Some(b_info);
         }
         Ok(s)
     }
