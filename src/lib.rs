@@ -87,7 +87,12 @@ impl GitStatus {
     }
 
     pub fn to_line(&self) -> String {
-        let mut line = format!("[{} {}", self.branch, &self.oid[..7]);
+        let short_oid = if self.oid == "(initial)" {
+            &self.oid
+        } else {
+            &self.oid[..7]
+        };
+        let mut line = format!("[{} {}", self.branch, short_oid);
         if self.ahead || self.behind || self.staged || self.unstaged || self.untracked || self.ignored {
             line.push(' ');
         }
@@ -307,5 +312,21 @@ mod tests {
             ignored: true,
         };
         assert_eq!(s.to_line(), String::from("[master 3845e7a AB+*?!] "));
+    }
+
+    #[test]
+    fn test_to_line_initial_commit() {
+        let s = GitStatus {
+            oid: String::from("(initial)"),
+            branch: String::from("master"),
+            upstream: None,
+            ahead: false,
+            behind: false,
+            staged: false,
+            unstaged: false,
+            untracked: false,
+            ignored: false,
+        };
+        assert_eq!(s.to_line(), String::from("[master (initial)] "));
     }
 }
