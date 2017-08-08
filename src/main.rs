@@ -1,13 +1,13 @@
+extern crate git_status_line;
+
 use std::process::Command;
 use std::str;
 
-fn main() {
-    println!("Hello, world!");
-}
+use git_status_line::GitStatus;
 
-fn run() {
-    let output = Command::new("/usr/bin/git")
-        .args(&["status", "--porcelain=2", "-b"])
+fn main() {
+    let output = Command::new("git")
+        .args(&["status", "--porcelain=2", "--branch"])
         .output()
         .expect("failed to execute process");
     if output.status.success() {
@@ -15,7 +15,10 @@ fn run() {
             Ok(v) => v,
             Err(e) => panic!("Invalid UTF-8: {}", e),
         };
-        let lines: Vec<&str> = output.lines().collect();
-        println!("{:?}", lines);
+        let status = match GitStatus::new(output) {
+            Ok(v) => v,
+            Err(e) => panic!("{}", e),
+        };
+        print!("{}", status.to_line());
     }
 }

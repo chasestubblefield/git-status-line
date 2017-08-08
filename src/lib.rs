@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq)]
-struct GitStatus {
+pub struct GitStatus {
     oid: String,
     branch: String,
     upstream: Option<String>,
@@ -12,7 +12,7 @@ struct GitStatus {
 }
 
 impl GitStatus {
-    fn new(status_txt: &str) -> Result<GitStatus, &'static str> {
+    pub fn new(status_txt: &str) -> Result<GitStatus, &'static str> {
         let mut s = GitStatus {
             oid: String::new(),
             branch: String::new(),
@@ -86,7 +86,7 @@ impl GitStatus {
         Ok(s)
     }
 
-    fn to_line(&self) -> String {
+    pub fn to_line(&self) -> String {
         let mut line = format!("[{} {}", self.branch, &self.oid[..7]);
         if self.ahead || self.behind || self.staged || self.unstaged || self.untracked || self.ignored {
             line.push(' ');
