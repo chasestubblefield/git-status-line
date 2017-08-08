@@ -1,3 +1,7 @@
+#![feature(test)]
+
+extern crate test;
+
 #[derive(Debug, PartialEq, Eq)]
 struct GitStatus {
     branch: Option<BranchInfo>,
@@ -112,6 +116,7 @@ impl GitStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn parse_clean() {
@@ -265,6 +270,21 @@ mod tests {
                 ignored: true,
             }
         );
+    }
+
+    #[bench]
+    fn bench_very_dirty(b: &mut Bencher) {
+        let test_status = "\
+# branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
+# branch.head master
+# branch.upstream origin/master
+# branch.ab +1 -1
+1 D. N... 100644 000000 000000 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 0000000000000000000000000000000000000000 README.md
+1 .M N... 100644 100644 100644 5e8a8090976077ddf16252a560460a20dbbdd6a5 5e8a8090976077ddf16252a560460a20dbbdd6a5 gh-pages.sh
+? foo.txt
+! ignored.txt
+";
+        b.iter(|| GitStatus::new(test_status));
     }
 
     #[test]
