@@ -87,7 +87,16 @@ impl GitStatus {
     }
 
     fn to_line(&self) -> String {
-        let mut line = String::from("[");
+        let mut line = format!("[{} {}", self.branch, &self.oid[..7]);
+        if self.ahead || self.behind || self.staged || self.unstaged || self.untracked || self.ignored {
+            line.push(' ');
+        }
+        if self.ahead {
+            line.push('A');
+        }
+        if self.behind {
+            line.push('B');
+        }
         if self.staged {
             line.push('+');
         }
