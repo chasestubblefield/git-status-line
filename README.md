@@ -2,6 +2,12 @@
 
 [![Build Status](https://travis-ci.org/chasetopher/git-status-line.svg?branch=master)](https://travis-ci.org/chasetopher/git-status-line)
 
+## Install
+
+```bash
+brew install https://gist.githubusercontent.com/chasetopher/0065ce4f47aa165b813488b159ca40ef/raw/git-status-line.rb
+```
+
 ## Usage
 
 ```bash
