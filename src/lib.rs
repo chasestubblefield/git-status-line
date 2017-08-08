@@ -107,6 +107,24 @@ impl GitStatus {
         }
         Ok(s)
     }
+
+    fn to_line(&self) -> String {
+        let mut line = String::from("(");
+        if self.staged {
+            line.push('+');
+        }
+        if self.unstaged {
+            line.push('*');
+        }
+        if self.untracked {
+            line.push('?');
+        }
+        if self.ignored {
+            line.push('!');
+        }
+        line.push_str(") ");
+        line
+    }
 }
 
 #[cfg(test)]
@@ -270,5 +288,53 @@ mod tests {
     #[test]
     fn parse_improper_status() {
         assert_eq!(GitStatus::new("foo"), Err("Unrecognized line in status"));
+    }
+
+    #[test]
+    fn test_to_line_clean_no_branch() {
+        let s = GitStatus {
+            branch: None,
+            staged: false,
+            unstaged: false,
+            untracked: false,
+            ignored: false,
+        };
+        assert_eq!(s.to_line(), String::from("() "));
+    }
+
+    #[test]
+    fn test_to_line_clean_with_branch() {
+        let s = GitStatus {
+            branch: Some(BranchInfo {
+                object_id: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
+                name: Some(String::from("master")),
+                upstream: None,
+            }),
+            staged: false,
+            unstaged: false,
+            untracked: false,
+            ignored: false,
+        };
+        assert_eq!(s.to_line(), String::from("(master) "));
+    }
+
+    #[test]
+    fn test_to_line_dirty() {
+        let s = GitStatus {
+            branch: Some(BranchInfo {
+                object_id: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
+                name: Some(String::from("master")),
+                upstream: Some(UpstreamInfo {
+                    name: String::from("origin/master"),
+                    ahead: true,
+                    behind: true,
+                }),
+            }),
+            staged: true,
+            unstaged: true,
+            untracked: true,
+            ignored: true,
+        };
+        assert_eq!(s.to_line(), String::from("(master AB+*?!) "));
     }
 }
