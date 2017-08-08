@@ -19,6 +19,6 @@ fn main() {
             Ok(v) => v,
             Err(e) => panic!("{}", e),
         };
-        print!("{}", status.to_line());
+        print!("{} ", status.to_line());
     }
 }

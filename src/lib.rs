@@ -87,35 +87,35 @@ impl GitStatus {
     }
 
     pub fn to_line(&self) -> String {
+        let mut symbols = String::new();
+        if self.ahead {
+            symbols.push('A');
+        }
+        if self.behind {
+            symbols.push('B');
+        }
+        if self.staged {
+            symbols.push('+');
+        }
+        if self.unstaged {
+            symbols.push('*');
+        }
+        if self.untracked {
+            symbols.push('?');
+        }
+        if self.ignored {
+            symbols.push('!');
+        }
         let short_oid = if self.oid == "(initial)" {
             &self.oid
         } else {
             &self.oid[..7]
         };
-        let mut line = format!("[{} {}", self.branch, short_oid);
-        if self.ahead || self.behind || self.staged || self.unstaged || self.untracked || self.ignored {
-            line.push(' ');
+        if symbols.is_empty() {
+            format!("[{} {}]", self.branch, short_oid)
+        } else {
+            format!("[{} {} {}]", self.branch, short_oid, symbols)
         }
-        if self.ahead {
-            line.push('A');
-        }
-        if self.behind {
-            line.push('B');
-        }
-        if self.staged {
-            line.push('+');
-        }
-        if self.unstaged {
-            line.push('*');
-        }
-        if self.untracked {
-            line.push('?');
-        }
-        if self.ignored {
-            line.push('!');
-        }
-        line.push_str("] ");
-        line
     }
 }
 
@@ -295,7 +295,7 @@ mod tests {
             untracked: false,
             ignored: false,
         };
-        assert_eq!(s.to_line(), String::from("[master 3845e7a] "));
+        assert_eq!(s.to_line(), String::from("[master 3845e7a]"));
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod tests {
             untracked: true,
             ignored: true,
         };
-        assert_eq!(s.to_line(), String::from("[master 3845e7a AB+*?!] "));
+        assert_eq!(s.to_line(), String::from("[master 3845e7a AB+*?!]"));
     }
 
     #[test]
@@ -327,6 +327,6 @@ mod tests {
             untracked: false,
             ignored: false,
         };
-        assert_eq!(s.to_line(), String::from("[master (initial)] "));
+        assert_eq!(s.to_line(), String::from("[master (initial)]"));
     }
 }
