@@ -5,12 +5,12 @@
 ## Install
 
 ```bash
-brew install https://gist.githubusercontent.com/chasetopher/0065ce4f47aa165b813488b159ca40ef/raw/git-status-line.rb
+brew install chasetopher/personal/git-status-line
 ```
 
 ## Usage
 
-```bash
+```
 $ PS1='$(git status-line)$ '
 $ cd my_git_project
 [master ea9cf71] $ touch foo.txt
