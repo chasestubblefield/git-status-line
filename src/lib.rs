@@ -29,18 +29,14 @@ impl GitStatus {
             let mut words = line.split(' ');
             match words.next() {
                 Some("#") => {
-                    match words.next() {
-                        Some("branch.oid") => {
-                            s.oid = String::from(words.next().ok_or(err)?);
-                        },
-                        Some("branch.head") => {
-                            s.branch = String::from(words.next().ok_or(err)?);
-                        }
-                        Some("branch.upstream") => {
-                            s.upstream = Some(String::from(words.next().ok_or(err)?));
-                        },
-                        Some("branch.ab") => {
-                            if words.next().ok_or(err)? != "+0" {
+                    let key = words.next().ok_or(err)?;
+                    let value = words.next().ok_or(err)?;
+                    match key {
+                        "branch.oid" => s.oid = String::from(value),
+                        "branch.head" => s.branch = String::from(value),
+                        "branch.upstream" => s.upstream = Some(String::from(value)),
+                        "branch.ab" => {
+                            if value != "+0" {
                                 s.ahead = true;
                             }
                             if words.next().ok_or(err)? != "-0" {
