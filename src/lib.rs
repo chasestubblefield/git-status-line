@@ -24,54 +24,46 @@ impl GitStatus {
             untracked: false,
             ignored: false,
         };
+        let err = "Bad input";
         for line in status_txt.lines() {
             let mut words = line.split(' ');
             match words.next() {
                 Some("#") => {
                     match words.next() {
                         Some("branch.oid") => {
-                            s.oid = String::from(words.next().ok_or("Bad input")?);
+                            s.oid = String::from(words.next().ok_or(err)?);
                         },
                         Some("branch.head") => {
-                            s.branch = String::from(words.next().ok_or("Bad input")?);
+                            s.branch = String::from(words.next().ok_or(err)?);
                         }
                         Some("branch.upstream") => {
-                            s.upstream = Some(String::from(words.next().ok_or("Bad input")?));
+                            s.upstream = Some(String::from(words.next().ok_or(err)?));
                         },
                         Some("branch.ab") => {
-                            match words.next() {
-                                Some("+0") => {},
-                                Some(_) => s.ahead = true,
-                                None => return Err("Bad input"),
+                            if words.next().ok_or(err)? != "+0" {
+                                s.ahead = true;
                             }
-                            match words.next() {
-                                Some("-0") => {},
-                                Some(_) => s.behind = true,
-                                None => return Err("Bad input"),
+                            if words.next().ok_or(err)? != "-0" {
+                                s.behind = true;
                             }
                         },
-                        _ => return Err("Bad input"),
+                        _ => return Err(err),
                     }
                 },
                 Some("1") | Some("2") => {
-                    if let Some(changes) = words.next() {
-                        let mut changes = changes.chars();
-                        match changes.next() {
-                            Some('.') => {},
-                            Some(_) => s.staged = true,
-                            None => return Err("Bad input"),
-                        }
-                        match changes.next() {
-                            Some('.') => {},
-                            Some(_) => s.unstaged = true,
-                            None => return Err("Bad input"),
-                        }
+                    let changes = words.next().ok_or(err)?;
+                    let mut changes = changes.chars();
+                    if changes.next().ok_or(err)? != '.' {
+                        s.staged = true;
+                    }
+                    if changes.next().ok_or(err)? != '.' {
+                        s.unstaged = true;
                     }
                 },
                 Some("?") => s.untracked = true,
                 Some("!") => s.ignored = true,
                 Some("") | None => {},
-                _ => return Err("Bad input"),
+                _ => return Err(err),
             }
         }
         Ok(s)
