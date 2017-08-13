@@ -82,6 +82,9 @@ impl GitStatus {
         if self.unstaged {
             symbols.push('*');
         }
+        if self.unmerged {
+            symbols.push('%');
+        }
         if self.untracked {
             symbols.push('?');
         }
@@ -305,11 +308,11 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
             behind: true,
             staged: true,
             unstaged: true,
-            unmerged: false,
+            unmerged: true,
             untracked: true,
             ignored: true,
         };
-        assert_eq!(s.to_line(), String::from("[master 3845e7a AB+*?!]"));
+        assert_eq!(s.to_line(), String::from("[master 3845e7a AB+*%?!]"));
     }
 
     #[test]
