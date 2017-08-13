@@ -30,22 +30,13 @@ impl GitStatus {
                 Some("#") => {
                     match words.next() {
                         Some("branch.oid") => {
-                            match words.next() {
-                                Some(oid) => s.oid = String::from(oid),
-                                None => return Err("Bad input"),
-                            }
+                            s.oid = String::from(words.next().ok_or("Bad input")?);
                         },
                         Some("branch.head") => {
-                            match words.next() {
-                                Some(branch) => s.branch = String::from(branch),
-                                None => return Err("Bad input"),
-                            }
+                            s.branch = String::from(words.next().ok_or("Bad input")?);
                         }
                         Some("branch.upstream") => {
-                            match words.next() {
-                                Some(upstream) => s.upstream = Some(String::from(upstream)),
-                                None => return Err("Bad input"),
-                            }
+                            s.upstream = Some(String::from(words.next().ok_or("Bad input")?));
                         },
                         Some("branch.ab") => {
                             match words.next() {
