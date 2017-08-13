@@ -5,11 +5,18 @@ pub struct GitStatus {
     upstream: Option<String>,
     ahead: bool,
     behind: bool,
+    merge: Option<MergeStatus>,
     staged: bool,
     unstaged: bool,
     unmerged: bool,
     untracked: bool,
     ignored: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum MergeStatus {
+    Merge,
+    Rebase,
 }
 
 impl GitStatus {
@@ -20,6 +27,7 @@ impl GitStatus {
             upstream: None,
             ahead: false,
             behind: false,
+            merge: None,
             staged: false,
             unstaged: false,
             untracked: false,
@@ -68,7 +76,21 @@ impl GitStatus {
         Ok(s)
     }
 
+    pub fn set_merge_status(&mut self, m: MergeStatus) {
+        self.merge = Some(m);
+    }
+
     pub fn to_line(&self) -> String {
+        let short_oid = if self.oid == "(initial)" {
+            &self.oid
+        } else {
+            &self.oid[..7]
+        };
+        let merge_status = match self.merge {
+            None => "",
+            Some(MergeStatus::Merge) => "(merge)",
+            Some(MergeStatus::Rebase) => "(rebase)",
+        };
         let mut symbols = String::new();
         if self.ahead {
             symbols.push('A');
@@ -91,16 +113,17 @@ impl GitStatus {
         if self.ignored {
             symbols.push('!');
         }
-        let short_oid = if self.oid == "(initial)" {
-            &self.oid
-        } else {
-            &self.oid[..7]
-        };
-        if symbols.is_empty() {
-            format!("[{} {}]", self.branch, short_oid)
-        } else {
-            format!("[{} {} {}]", self.branch, short_oid, symbols)
+        let mut result = format!("[{} {}", self.branch, short_oid);
+        if !merge_status.is_empty() {
+            result.push(' ');
+            result.push_str(merge_status);
         }
+        if !symbols.is_empty() {
+            result.push(' ');
+            result.push_str(&symbols);
+        }
+        result.push(']');
+        result
     }
 }
 
@@ -122,6 +145,7 @@ mod tests {
                 upstream: None,
                 ahead: false,
                 behind: false,
+                merge: None,
                 staged: false,
                 unstaged: false,
                 unmerged: false,
@@ -147,6 +171,7 @@ mod tests {
                 upstream: Some(String::from("origin/master")),
                 ahead: true,
                 behind: true,
+                merge: None,
                 staged: false,
                 unstaged: false,
                 unmerged: false,
@@ -223,8 +248,10 @@ mod tests {
 # branch.head master
 u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 801dd97d4dace6780f9eca5a99dbee77d6e05a95 cbf6eb8db76897842f3b77d1d2b95dbd422c180d README.md
 ";
-        let s = GitStatus::new(test_status).unwrap();
+        let mut s = GitStatus::new(test_status).unwrap();
+        s.set_merge_status(MergeStatus::Merge);
         assert!(s.unmerged);
+        assert_eq!(s.merge, Some(MergeStatus::Merge));
     }
 
     #[test]
@@ -267,6 +294,7 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
                 upstream: Some(String::from("origin/master")),
                 ahead: true,
                 behind: true,
+                merge: None,
                 staged: true,
                 unstaged: true,
                 unmerged: false,
@@ -289,6 +317,7 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
             upstream: None,
             ahead: false,
             behind: false,
+            merge: None,
             staged: false,
             unstaged: false,
             unmerged: false,
@@ -306,6 +335,7 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
             upstream: Some(String::from("origin/master")),
             ahead: true,
             behind: true,
+            merge: None,
             staged: true,
             unstaged: true,
             unmerged: true,
@@ -323,6 +353,7 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
             upstream: None,
             ahead: false,
             behind: false,
+            merge: None,
             staged: false,
             unstaged: false,
             unmerged: false,
@@ -330,5 +361,23 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
             ignored: false,
         };
         assert_eq!(s.to_line(), String::from("[master (initial)]"));
+    }
+
+    #[test]
+    fn test_to_line_merge() {
+        let s = GitStatus {
+            oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
+            branch: String::from("master"),
+            upstream: None,
+            ahead: false,
+            behind: false,
+            merge: Some(MergeStatus::Merge),
+            staged: false,
+            unstaged: false,
+            unmerged: true,
+            untracked: false,
+            ignored: false,
+        };
+        assert_eq!(s.to_line(), String::from("[master 3845e7a (merge) %]"));
     }
 }
