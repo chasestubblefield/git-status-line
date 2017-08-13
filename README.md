@@ -31,7 +31,7 @@ $ cd my_git_project
 
 ## Performance
 
-Here's how `git-status-line` compares to `__git_ps1` (provided by `git`) and a old Perl script I used to use called `git-prompt`:
+Here's how `git-status-line` compares to `__git_ps1` (provided by `git`) and an [old Perl script](https://github.com/chasetopher/old_dotfiles/blob/master/home/.bin/git-prompt) I used to use called `git-prompt`:
 
 ![img](https://user-images.githubusercontent.com/606164/29245216-f37ab7da-7f87-11e7-8f8e-1b998914549d.png)
 
