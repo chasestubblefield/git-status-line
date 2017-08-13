@@ -34,3 +34,9 @@ $ cd my_git_project
 Here's how `git-status-line` compares to `__git_ps1` (provided by `git`) and a old Perl script I used to use called `git-prompt`:
 
 ![img](https://user-images.githubusercontent.com/606164/29245167-78205ee2-7f86-11e7-989e-7b7250c910c4.png)
+
+## TODO
+
+- Add color
+- Customization of colors/symbols/format
+- Indication of merging or rebasing
