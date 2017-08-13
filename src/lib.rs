@@ -7,6 +7,7 @@ pub struct GitStatus {
     behind: bool,
     staged: bool,
     unstaged: bool,
+    unmerged: bool,
     untracked: bool,
     ignored: bool,
 }
@@ -22,6 +23,7 @@ impl GitStatus {
             staged: false,
             unstaged: false,
             untracked: false,
+            unmerged: false,
             ignored: false,
         };
         let err = "Bad input";
@@ -56,6 +58,7 @@ impl GitStatus {
                         s.unstaged = true;
                     }
                 },
+                Some("u") => s.unmerged = true,
                 Some("?") => s.untracked = true,
                 Some("!") => s.ignored = true,
                 Some("") | None => {},
@@ -118,6 +121,7 @@ mod tests {
                 behind: false,
                 staged: false,
                 unstaged: false,
+                unmerged: false,
                 untracked: false,
                 ignored: false,
             }
@@ -142,6 +146,7 @@ mod tests {
                 behind: true,
                 staged: false,
                 unstaged: false,
+                unmerged: false,
                 untracked: false,
                 ignored: false,
             }
@@ -209,6 +214,17 @@ mod tests {
     }
 
     #[test]
+    fn parse_unmerged() {
+        let test_status = "\
+# branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
+# branch.head master
+u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 801dd97d4dace6780f9eca5a99dbee77d6e05a95 cbf6eb8db76897842f3b77d1d2b95dbd422c180d README.md
+";
+        let s = GitStatus::new(test_status).unwrap();
+        assert!(s.unmerged);
+    }
+
+    #[test]
     fn parse_untracked() {
         let test_status = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
@@ -250,6 +266,7 @@ mod tests {
                 behind: true,
                 staged: true,
                 unstaged: true,
+                unmerged: false,
                 untracked: true,
                 ignored: true,
             }
@@ -271,6 +288,7 @@ mod tests {
             behind: false,
             staged: false,
             unstaged: false,
+            unmerged: false,
             untracked: false,
             ignored: false,
         };
@@ -287,6 +305,7 @@ mod tests {
             behind: true,
             staged: true,
             unstaged: true,
+            unmerged: false,
             untracked: true,
             ignored: true,
         };
@@ -303,6 +322,7 @@ mod tests {
             behind: false,
             staged: false,
             unstaged: false,
+            unmerged: false,
             untracked: false,
             ignored: false,
         };
