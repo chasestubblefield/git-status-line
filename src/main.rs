@@ -3,7 +3,7 @@ extern crate git_status_line;
 use std::process::Command;
 use std::str;
 
-use git_status_line::GitStatus;
+use git_status_line::Status;
 
 fn main() {
     let output = Command::new("git")
@@ -15,10 +15,10 @@ fn main() {
             Ok(v) => v,
             Err(e) => panic!("Invalid UTF-8: {}", e),
         };
-        let status = match GitStatus::new(output) {
+        let status = match Status::new(output) {
             Ok(v) => v,
             Err(e) => panic!("{}", e),
         };
-        print!("{} ", status.to_line());
+        print!("{} ", status);
     }
 }

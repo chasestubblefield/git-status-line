@@ -1,56 +1,58 @@
+use std::fmt;
+use std::collections::HashMap;
+
 #[derive(Debug, PartialEq, Eq)]
-pub struct GitStatus {
+pub struct Status {
     oid: String,
     branch: String,
     upstream: Option<String>,
     ahead: bool,
     behind: bool,
-    merge: Option<MergeStatus>,
     staged: bool,
     unstaged: bool,
     unmerged: bool,
     untracked: bool,
     ignored: bool,
+    merge_state: Option<MergeState>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum MergeStatus {
+pub enum MergeState {
     Merge,
     Rebase,
 }
 
-impl GitStatus {
-    pub fn new(status_txt: &str) -> Result<GitStatus, &'static str> {
-        let mut s = GitStatus {
-            oid: String::new(),
-            branch: String::new(),
-            upstream: None,
-            ahead: false,
-            behind: false,
-            merge: None,
-            staged: false,
-            unstaged: false,
-            untracked: false,
-            unmerged: false,
-            ignored: false,
-        };
-        let err = "Bad input";
-        for line in status_txt.lines() {
+impl Status {
+    pub fn new(input: &str) -> Result<Status, &'static str> {
+        let mut branch_info = HashMap::new();
+        let mut ahead = false;
+        let mut behind = false;
+        let mut staged = false;
+        let mut unstaged = false;
+        let mut unmerged = false;
+        let mut untracked = false;
+        let mut ignored = false;
+        let err = "Unexpected input";
+
+        for line in input.lines() {
             let mut words = line.split(' ');
             match words.next() {
                 Some("#") => {
                     let key = words.next().ok_or(err)?;
                     let value = words.next().ok_or(err)?;
                     match key {
-                        "branch.oid" => s.oid = String::from(value),
-                        "branch.head" => s.branch = String::from(value),
-                        "branch.upstream" => s.upstream = Some(String::from(value)),
+                        "branch.oid" | "branch.head" | "branch.upstream" => {
+                            branch_info.insert(key, value);
+                        },
                         "branch.ab" => {
-                            if value != "+0" {
-                                s.ahead = true;
+                            let ahead_count = value;
+                            let behind_count = words.next().ok_or(err)?;
+
+                            if ahead_count != "+0" {
+                                ahead = true;
                             }
-                            if words.next().ok_or(err)? != "-0" {
-                                s.behind = true;
+                            if behind_count != "-0" {
+                                behind = true;
                             }
                         },
                         _ => return Err(err),
@@ -59,71 +61,105 @@ impl GitStatus {
                 Some("1") | Some("2") => {
                     let changes = words.next().ok_or(err)?;
                     let mut changes = changes.chars();
-                    if changes.next().ok_or(err)? != '.' {
-                        s.staged = true;
+                    let staged_change = changes.next().ok_or(err)?;
+                    let unstaged_change = changes.next().ok_or(err)?;
+                    if staged_change != '.' {
+                        staged = true;
                     }
-                    if changes.next().ok_or(err)? != '.' {
-                        s.unstaged = true;
+                    if unstaged_change != '.' {
+                        unstaged = true;
                     }
                 },
-                Some("u") => s.unmerged = true,
-                Some("?") => s.untracked = true,
-                Some("!") => s.ignored = true,
-                Some("") | None => {},
+                Some("u") => unmerged = true,
+                Some("?") => untracked = true,
+                Some("!") => ignored = true,
+                Some("") => {},
                 _ => return Err(err),
             }
         }
-        Ok(s)
+
+        let oid = branch_info.get("branch.oid").ok_or(err)?.to_string();
+        let branch = branch_info.get("branch.head").ok_or(err)?.to_string();
+        let upstream = branch_info.get("branch.upstream").map(|s| s.to_string());
+
+        Ok(Status {
+            oid,
+            branch,
+            upstream,
+            ahead,
+            behind,
+            staged,
+            unstaged,
+            unmerged,
+            untracked,
+            ignored,
+            merge_state: None,
+        })
     }
 
-    pub fn set_merge_status(&mut self, m: MergeStatus) {
-        self.merge = Some(m);
+    pub fn set_merge_state(&mut self, m: MergeState) {
+        self.merge_state = Some(m);
     }
 
-    pub fn to_line(&self) -> String {
-        let short_oid = if self.oid == "(initial)" {
-            &self.oid
+    pub fn is_dirty(&self) -> bool {
+        self.ahead || self.behind || self.staged || self.unstaged || self.unmerged || self.untracked || self.ignored
+    }
+
+    fn to_string(&self) -> String {
+        let mut result = String::new();
+
+        result.push('[');
+
+        result.push_str(&self.branch);
+
+        result.push(' ');
+
+        if self.oid == "(initial)" {
+            result.push_str(&self.oid);
         } else {
-            &self.oid[..7]
+            result.push_str(&self.oid[..7]);
         };
-        let merge_status = match self.merge {
-            None => "",
-            Some(MergeStatus::Merge) => "(merge)",
-            Some(MergeStatus::Rebase) => "(rebase)",
-        };
-        let mut symbols = String::new();
-        if self.ahead {
-            symbols.push('A');
+
+        match self.merge_state {
+            Some(MergeState::Merge) => result.push_str(" (merge)"),
+            Some(MergeState::Rebase) => result.push_str(" (rebase)"),
+            _ => {},
         }
-        if self.behind {
-            symbols.push('B');
-        }
-        if self.staged {
-            symbols.push('+');
-        }
-        if self.unstaged {
-            symbols.push('*');
-        }
-        if self.unmerged {
-            symbols.push('%');
-        }
-        if self.untracked {
-            symbols.push('?');
-        }
-        if self.ignored {
-            symbols.push('!');
-        }
-        let mut result = format!("[{} {}", self.branch, short_oid);
-        if !merge_status.is_empty() {
+
+        if self.is_dirty() {
             result.push(' ');
-            result.push_str(merge_status);
+            if self.ahead {
+                result.push('A');
+            }
+            if self.behind {
+                result.push('B');
+            }
+            if self.staged {
+                result.push('+');
+            }
+            if self.unstaged {
+                result.push('*');
+            }
+            if self.unmerged {
+                result.push('%');
+            }
+            if self.untracked {
+                result.push('?');
+            }
+            if self.ignored {
+                result.push('!');
+            }
         }
-        if !symbols.is_empty() {
-            result.push(' ');
-            result.push_str(&symbols);
-        }
+
         result.push(']');
+
         result
+    }
+}
+
+impl fmt::Display for Status {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 
@@ -132,150 +168,161 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_clean() {
-        let test_status = "\
+    fn new_clean() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 ";
         assert_eq!(
-            GitStatus::new(test_status).unwrap(),
-            GitStatus {
+            Status::new(input).unwrap(),
+            Status {
                 oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
                 branch: String::from("master"),
                 upstream: None,
                 ahead: false,
                 behind: false,
-                merge: None,
                 staged: false,
                 unstaged: false,
                 unmerged: false,
                 untracked: false,
                 ignored: false,
+                merge_state: None,
             }
         );
     }
 
     #[test]
-    fn parse_clean_upstream() {
-        let test_status = "\
+    fn new_clean_upstream() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 # branch.upstream origin/master
 # branch.ab +1 -1
 ";
         assert_eq!(
-            GitStatus::new(test_status).unwrap(),
-            GitStatus {
+            Status::new(input).unwrap(),
+            Status {
                 oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
                 branch: String::from("master"),
                 upstream: Some(String::from("origin/master")),
                 ahead: true,
                 behind: true,
-                merge: None,
                 staged: false,
                 unstaged: false,
                 unmerged: false,
                 untracked: false,
                 ignored: false,
+                merge_state: None,
             }
         );
     }
 
     #[test]
-    fn parse_staged_only() {
-        let test_status = "\
+    fn new_staged_only() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 1 M. N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 311c77295c5b6056f4599c2b8d0a019d4c76746a README.md
 ";
-        let s = GitStatus::new(test_status).unwrap();
-        assert!(s.staged);
-        assert!(!s.unstaged);
+        let s = Status::new(input).unwrap();
+        assert_eq!(
+            (s.staged, s.unstaged, s.unmerged),
+            (true, false, false)
+        );
     }
 
     #[test]
-    fn parse_unstaged_only() {
-        let test_status = "\
+    fn new_unstaged_only() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 1 .M N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 README.md
 ";
-        let s = GitStatus::new(test_status).unwrap();
-        assert!(!s.staged);
-        assert!(s.unstaged);
+        let s = Status::new(input).unwrap();
+        assert_eq!(
+            (s.staged, s.unstaged, s.unmerged),
+            (false, true, false)
+        );
     }
 
     #[test]
-    fn parse_both_staged_and_unstaged() {
-        let test_status = "\
+    fn new_both_staged_and_unstaged() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 1 MM N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 311c77295c5b6056f4599c2b8d0a019d4c76746a README.md
 ";
-        let s = GitStatus::new(test_status).unwrap();
-        assert!(s.staged);
-        assert!(s.unstaged);
+        let s = Status::new(input).unwrap();
+        assert_eq!(
+            (s.staged, s.unstaged, s.unmerged),
+            (true, true, false)
+        );
     }
 
     #[test]
-    fn parse_deleted() {
-        let test_status = "\
+    fn new_deleted() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 1 D. N... 100644 000000 000000 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 0000000000000000000000000000000000000000 README.md
 ";
-        let s = GitStatus::new(test_status).unwrap();
-        assert!(s.staged);
-        assert!(!s.unstaged);
+        let s = Status::new(input).unwrap();
+        assert_eq!(
+            (s.staged, s.unstaged, s.unmerged),
+            (true, false, false)
+        );
     }
 
     #[test]
-    fn parse_renamed() {
-        let test_status = "\
+    fn new_renamed() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 2 R. N... 100644 100644 100644 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 1290f45e7ad7575848a436d8febbd6c4ba07f1f3 R100 README	README.md
 ";
-        let s = GitStatus::new(test_status).unwrap();
-        assert!(s.staged);
-        assert!(!s.unstaged);
+        let s = Status::new(input).unwrap();
+        assert_eq!(
+            (s.staged, s.unstaged, s.unmerged),
+            (true, false, false)
+        );
     }
 
     #[test]
-    fn parse_unmerged() {
-        let test_status = "\
+    fn new_unmerged() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 801dd97d4dace6780f9eca5a99dbee77d6e05a95 cbf6eb8db76897842f3b77d1d2b95dbd422c180d README.md
 ";
-        let mut s = GitStatus::new(test_status).unwrap();
-        s.set_merge_status(MergeStatus::Merge);
-        assert!(s.unmerged);
-        assert_eq!(s.merge, Some(MergeStatus::Merge));
+        let s = Status::new(input).unwrap();
+        assert_eq!(
+            (s.staged, s.unstaged, s.unmerged),
+            (false, false, true)
+        );
     }
 
     #[test]
-    fn parse_untracked() {
-        let test_status = "\
+    fn new_untracked() {
+        let input = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 ? foo.txt
 ";
-        assert!(GitStatus::new(test_status).unwrap().untracked);
+        assert!(Status::new(input).unwrap().untracked);
     }
 
     #[test]
-    fn parse_ignored() {
+    fn new_ignored() {
         let test_status = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
 ! node_modules/
 ";
-        assert!(GitStatus::new(test_status).unwrap().ignored);
+        assert!(Status::new(test_status).unwrap().ignored);
     }
 
     #[test]
-    fn parse_very_dirty() {
+    fn new_very_dirty() {
         let test_status = "\
 # branch.oid 3845e7a3c3aadaaebb2d1b261bf07a9357d35a79
 # branch.head master
@@ -287,97 +334,97 @@ u UU N... 100644 100644 100644 100644 8fb20c5f0b7da31f56f74f0a98e1fadb13e4c2a0 8
 ! ignored.txt
 ";
         assert_eq!(
-            GitStatus::new(test_status).unwrap(),
-            GitStatus {
+            Status::new(test_status).unwrap(),
+            Status {
                 oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
                 branch: String::from("master"),
                 upstream: Some(String::from("origin/master")),
                 ahead: true,
                 behind: true,
-                merge: None,
                 staged: true,
                 unstaged: true,
                 unmerged: false,
                 untracked: true,
                 ignored: true,
+                merge_state: None,
             }
         );
     }
 
     #[test]
-    fn parse_bad_input() {
-        assert_eq!(GitStatus::new("foo"), Err("Bad input"));
+    fn new_unexpected_input() {
+        assert_eq!(Status::new("foo"), Err("Unexpected input"));
     }
 
     #[test]
-    fn test_to_line_clean() {
-        let s = GitStatus {
+    fn to_string_clean() {
+        let s = Status {
             oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
             branch: String::from("master"),
             upstream: None,
             ahead: false,
             behind: false,
-            merge: None,
             staged: false,
             unstaged: false,
             unmerged: false,
             untracked: false,
             ignored: false,
+            merge_state: None,
         };
-        assert_eq!(s.to_line(), String::from("[master 3845e7a]"));
+        assert_eq!(s.to_string(), "[master 3845e7a]");
     }
 
     #[test]
-    fn test_to_line_dirty() {
-        let s = GitStatus {
+    fn to_string_dirty() {
+        let s = Status {
             oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
             branch: String::from("master"),
             upstream: Some(String::from("origin/master")),
             ahead: true,
             behind: true,
-            merge: None,
             staged: true,
             unstaged: true,
             unmerged: true,
             untracked: true,
             ignored: true,
+            merge_state: None,
         };
-        assert_eq!(s.to_line(), String::from("[master 3845e7a AB+*%?!]"));
+        assert_eq!(s.to_string(), "[master 3845e7a AB+*%?!]");
     }
 
     #[test]
-    fn test_to_line_initial_commit() {
-        let s = GitStatus {
+    fn to_string_initial_commit() {
+        let s = Status {
             oid: String::from("(initial)"),
             branch: String::from("master"),
             upstream: None,
             ahead: false,
             behind: false,
-            merge: None,
             staged: false,
             unstaged: false,
             unmerged: false,
             untracked: false,
             ignored: false,
+            merge_state: None,
         };
-        assert_eq!(s.to_line(), String::from("[master (initial)]"));
+        assert_eq!(s.to_string(), "[master (initial)]");
     }
 
     #[test]
-    fn test_to_line_merge() {
-        let s = GitStatus {
+    fn to_string_merge() {
+        let s = Status {
             oid: String::from("3845e7a3c3aadaaebb2d1b261bf07a9357d35a79"),
             branch: String::from("master"),
             upstream: None,
             ahead: false,
             behind: false,
-            merge: Some(MergeStatus::Merge),
             staged: false,
             unstaged: false,
             unmerged: true,
             untracked: false,
             ignored: false,
+            merge_state: Some(MergeState::Merge),
         };
-        assert_eq!(s.to_line(), String::from("[master 3845e7a (merge) %]"));
+        assert_eq!(s.to_string(), "[master 3845e7a (merge) %]");
     }
 }
