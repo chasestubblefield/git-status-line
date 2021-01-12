@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-brew install chasetopher/personal/git-status-line
+brew install chasestubblefield/brew/git-status-line
 ```
 
 ## Usage
