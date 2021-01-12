@@ -3,5 +3,8 @@ name = "git-status-line"
 version = "0.3.0"
 authors = ["Chase Stubblefield <chasestubblefield@gmail.com>"]
 edition = "2018"
+description = "Compact git status for use in shell prompts"
+repository = "https://github.com/chasestubblefield/git-status-line/"
+license = "MIT"
 
 [dependencies]
