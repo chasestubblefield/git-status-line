@@ -1,6 +1,6 @@
 # git-status-line
 
-[![Build Status](https://travis-ci.com/chasestubblefield/git-status-line.svg?branch=master)](https://travis-ci.com/chasestubblefield/git-status-line)
+![Build Status](https://github.com/chasestubblefield/git-status-line/actions/workflows/ci.yml/badge.svg)
 
 ## Install
 
